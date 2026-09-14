@@ -161,7 +161,3 @@ Vacinas: registrar aplicação (Create), listar carteira (Read) e excluir regist
 
 ---
 
-## Observações da entrega
-
-- Entrega pelo **GitHub Classroom** / repositório do grupo  
-- O app não usa dados mockados: tudo depende da API em execução  
