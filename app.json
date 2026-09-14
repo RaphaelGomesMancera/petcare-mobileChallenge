@@ -1,0 +1,21 @@
+{
+  "expo": {
+    "name": "PetCareIA+",
+    "slug": "petcare-mobile",
+    "scheme": "petcareia",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "backgroundColor": "#1a5fb4"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "br.com.petcare.mobile"
+    },
+    "android": {
+      "package": "br.com.petcare.mobile"
+    },
+    "plugins": ["expo-router"]
+  }
+}
