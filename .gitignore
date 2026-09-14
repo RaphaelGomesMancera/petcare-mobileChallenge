@@ -1,0 +1,35 @@
+# Dependências
+node_modules/
+
+# Expo
+.expo/
+dist/
+web-build/
+
+# Nativo (caso rodem eject ou prebuild)
+*.orig.*
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+
+# Variáveis de ambiente
+.env
+.env.local
+
+# Sistema
+.DS_Store
+Thumbs.db
+
+# Logs
+npm-debug.*
+yarn-debug.*
+yarn-error.*
+
+# TypeScript
+*.tsbuildinfo
+
+# IDE
+.vscode/
+.idea/
