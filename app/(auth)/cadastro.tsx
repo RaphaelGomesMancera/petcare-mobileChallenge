@@ -1,19 +1,17 @@
-import { useState } from 'react';
-import {
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  StyleSheet,
-  ActivityIndicator,
-  KeyboardAvoidingView,
-  Platform,
-} from 'react-native';
+import { useMemo, useState } from 'react';
+import { KeyboardAvoidingView, Platform, StyleSheet, Text } from 'react-native';
 import { Link, router } from 'expo-router';
+import { Botao } from '@/components/Botao';
+import { CampoTexto } from '@/components/CampoTexto';
+import { TextoErro } from '@/components/TextoErro';
 import { useAuth } from '@/context/AuthContext';
-import { colors } from '@/theme/colors';
+import { useTheme } from '@/context/ThemeContext';
+import { Palette } from '@/theme/colors';
+import { mensagemDeErro } from '@/utils/erros';
 
 export default function CadastroScreen() {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const { registrar } = useAuth();
   const [nome, setNome] = useState('');
   const [email, setEmail] = useState('');
@@ -22,65 +20,45 @@ export default function CadastroScreen() {
   const [erro, setErro] = useState<string | null>(null);
 
   async function handleCadastro() {
-    if (!nome || !email || senha.length < 6) {
+    if (!nome.trim() || !email.trim() || senha.length < 6) {
       setErro('Preencha nome, e-mail e uma senha com 6+ caracteres');
       return;
     }
     setErro(null);
     setCarregando(true);
     try {
-      // Cadastro pelo Mobile é sempre como TUTOR (perfil CLINICA é criado pela equipe da clínica)
-      await registrar({ nome, email, senha, perfil: 'TUTOR' });
+      // A API cadastra sempre como TUTOR (conta de CLINICA é criada pela própria clínica)
+      await registrar({ nome: nome.trim(), email: email.trim(), senha });
       router.replace('/(tabs)/dashboard');
-    } catch (e: any) {
-      const status = e?.response?.status;
-      if (status === 409) {
-        setErro('Este e-mail já está cadastrado. Use Entrar ou outro e-mail.');
-      } else if (status === 400) {
-        setErro(e?.response?.data?.mensagem ?? 'Dados inválidos. Verifique e-mail e senha (mín. 6).');
-      } else if (!e?.response) {
-        setErro('Não conectou na API. Confirme se ela está em http://localhost:8080');
-      } else {
-        setErro('Não foi possível criar a conta. Tente novamente.');
-      }
+    } catch (e) {
+      setErro(mensagemDeErro(e, 'Não foi possível criar a conta. Tente novamente.'));
     } finally {
       setCarregando(false);
     }
   }
 
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-    >
+    <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <Text style={styles.titulo}>Criar conta de tutor</Text>
 
-      {erro && <Text style={styles.erro}>{erro}</Text>}
+      <TextoErro mensagem={erro} />
 
-      <TextInput style={styles.input} placeholder="Nome completo" value={nome} onChangeText={setNome} />
-      <TextInput
-        style={styles.input}
+      <CampoTexto placeholder="Nome completo" value={nome} onChangeText={setNome} />
+      <CampoTexto
         placeholder="E-mail"
         autoCapitalize="none"
         keyboardType="email-address"
         value={email}
         onChangeText={setEmail}
       />
-      <TextInput
-        style={styles.input}
+      <CampoTexto
         placeholder="Senha (mín. 6 caracteres)"
         secureTextEntry
         value={senha}
         onChangeText={setSenha}
       />
 
-      <TouchableOpacity style={styles.botao} onPress={handleCadastro} disabled={carregando}>
-        {carregando ? (
-          <ActivityIndicator color={colors.branco} />
-        ) : (
-          <Text style={styles.botaoTexto}>Criar conta</Text>
-        )}
-      </TouchableOpacity>
+      <Botao titulo="Criar conta" onPress={handleCadastro} carregando={carregando} />
 
       <Link href="/(auth)/login" style={styles.link}>
         Já tem conta? Entrar
@@ -89,25 +67,9 @@ export default function CadastroScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, justifyContent: 'center', padding: 24, backgroundColor: colors.fundo },
-  titulo: { fontSize: 22, fontWeight: 'bold', color: colors.azul, textAlign: 'center', marginBottom: 24 },
-  input: {
-    backgroundColor: colors.branco,
-    borderWidth: 1,
-    borderColor: colors.borda,
-    borderRadius: 10,
-    padding: 14,
-    marginBottom: 12,
-  },
-  botao: {
-    backgroundColor: colors.verde,
-    borderRadius: 10,
-    padding: 16,
-    alignItems: 'center',
-    marginTop: 8,
-  },
-  botaoTexto: { color: colors.branco, fontWeight: 'bold', fontSize: 16 },
-  link: { textAlign: 'center', marginTop: 20, color: colors.azul },
-  erro: { color: colors.erro, textAlign: 'center', marginBottom: 12 },
-});
+const makeStyles = (colors: Palette) =>
+  StyleSheet.create({
+    container: { flex: 1, justifyContent: 'center', padding: 24, backgroundColor: colors.fundo },
+    titulo: { fontSize: 22, fontWeight: 'bold', color: colors.azul, textAlign: 'center', marginBottom: 24 },
+    link: { textAlign: 'center', marginTop: 20, color: colors.azul },
+  });

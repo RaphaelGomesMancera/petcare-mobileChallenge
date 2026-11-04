@@ -1,10 +1,17 @@
-import { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator, ScrollView } from 'react-native';
+import { useMemo, useState } from 'react';
+import { ScrollView, StyleSheet, Text } from 'react-native';
 import { router } from 'expo-router';
+import { Botao } from '@/components/Botao';
+import { CampoTexto } from '@/components/CampoTexto';
+import { TextoErro } from '@/components/TextoErro';
+import { useTheme } from '@/context/ThemeContext';
 import { useCriarPet } from '@/hooks/usePets';
-import { colors } from '@/theme/colors';
+import { Palette } from '@/theme/colors';
+import { mensagemDeErro } from '@/utils/erros';
 
 export default function NovoPetScreen() {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const criarPet = useCriarPet();
   const [nome, setNome] = useState('');
   const [raca, setRaca] = useState('');
@@ -12,64 +19,42 @@ export default function NovoPetScreen() {
   const [erro, setErro] = useState<string | null>(null);
 
   async function salvar() {
-    if (!nome || !raca) {
+    if (!nome.trim() || !raca.trim()) {
       setErro('Nome e raça são obrigatórios');
       return;
     }
     setErro(null);
     try {
       await criarPet.mutateAsync({
-        nome,
-        raca,
+        nome: nome.trim(),
+        raca: raca.trim(),
         dataNascimento: null,
         peso: peso ? Number(peso.replace(',', '.')) : null,
         fotoUrl: null,
       });
       router.back();
-    } catch {
-      setErro('Não foi possível cadastrar o pet. Tente novamente.');
+    } catch (e) {
+      setErro(mensagemDeErro(e, 'Não foi possível cadastrar o pet. Tente novamente.'));
     }
   }
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
+    <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
       <Text style={styles.titulo}>Novo pet</Text>
 
-      {erro && <Text style={styles.erro}>{erro}</Text>}
+      <TextoErro mensagem={erro} />
 
-      <TextInput style={styles.input} placeholder="Nome do pet" value={nome} onChangeText={setNome} />
-      <TextInput style={styles.input} placeholder="Raça" value={raca} onChangeText={setRaca} />
-      <TextInput
-        style={styles.input}
-        placeholder="Peso (kg)"
-        keyboardType="numeric"
-        value={peso}
-        onChangeText={setPeso}
-      />
+      <CampoTexto placeholder="Nome do pet" value={nome} onChangeText={setNome} />
+      <CampoTexto placeholder="Raça" value={raca} onChangeText={setRaca} />
+      <CampoTexto placeholder="Peso (kg)" keyboardType="numeric" value={peso} onChangeText={setPeso} />
 
-      <TouchableOpacity style={styles.botao} onPress={salvar} disabled={criarPet.isPending}>
-        {criarPet.isPending ? (
-          <ActivityIndicator color={colors.branco} />
-        ) : (
-          <Text style={styles.botaoTexto}>Salvar</Text>
-        )}
-      </TouchableOpacity>
+      <Botao titulo="Salvar" onPress={salvar} carregando={criarPet.isPending} />
     </ScrollView>
   );
 }
 
-const styles = StyleSheet.create({
-  container: { padding: 24, backgroundColor: colors.fundo, flexGrow: 1 },
-  titulo: { fontSize: 20, fontWeight: 'bold', color: colors.azul, marginBottom: 20 },
-  input: {
-    backgroundColor: colors.branco,
-    borderWidth: 1,
-    borderColor: colors.borda,
-    borderRadius: 10,
-    padding: 14,
-    marginBottom: 12,
-  },
-  botao: { backgroundColor: colors.verde, borderRadius: 10, padding: 16, alignItems: 'center', marginTop: 8 },
-  botaoTexto: { color: colors.branco, fontWeight: 'bold' },
-  erro: { color: colors.erro, marginBottom: 12 },
-});
+const makeStyles = (colors: Palette) =>
+  StyleSheet.create({
+    container: { padding: 24, backgroundColor: colors.fundo, flexGrow: 1 },
+    titulo: { fontSize: 20, fontWeight: 'bold', color: colors.azul, marginBottom: 20 },
+  });

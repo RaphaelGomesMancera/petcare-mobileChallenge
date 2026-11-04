@@ -1,12 +1,14 @@
 import { Stack } from 'expo-router';
-import { colors } from '@/theme/colors';
+import { useTheme } from '@/context/ThemeContext';
 
 export default function PetsLayout() {
+  const { colors } = useTheme();
   return (
     <Stack
       screenOptions={{
-        headerStyle: { backgroundColor: colors.azul },
-        headerTintColor: colors.branco,
+        headerStyle: { backgroundColor: colors.header },
+        headerTintColor: colors.onPrimary,
+        contentStyle: { backgroundColor: colors.fundo },
       }}
     >
       <Stack.Screen name="index" options={{ title: 'Meus Pets' }} />

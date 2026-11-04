@@ -1,12 +1,13 @@
-# PetCareIA+ — Mobile Application Development | Sprint 3
+# 🐾 PetCareIA+ Mobile — Mobile Application Development | Sprint 4
 
-Aplicativo mobile desenvolvido com **React Native + Expo** para a **Sprint 3 de Mobile Application Development (FIAP)**, integrado à API Java (`petcare-api`) via HTTP.
+App **React Native + Expo** do PetCareIA+: tutores acompanham pets, agendam consultas e controlam vacinas;
+a clínica conduz a agenda. Consome a API Java do projeto ([petcare-api](https://github.com/RaphaelGomesMancera/petcare-api)).
 
-O **PetCareIA+** apoia tutores no acompanhamento contínuo da saúde do pet: cadastro de animais, agendamento de consultas, registro de vacinas e visualização do status de cuidados em um dashboard.
+> **App publicado (APK/link):** `<COLE_AQUI_O_LINK_DO_APK_OU_DA_PUBLICAÇÃO>`
+> **API em produção:** `<COLE_AQUI_O_LINK_DO_BACKEND>`
+> **Vídeo de demonstração:** `<COLE_AQUI_O_LINK_DO_VÍDEO>`
 
----
-
-## Integrantes
+## 👥 Integrantes
 
 | Integrante                      |        RM |
 | ------------------------------- | --------: |
@@ -15,149 +16,85 @@ O **PetCareIA+** apoia tutores no acompanhamento contínuo da saúde do pet: cad
 | Nathan Gonçalves Pereira Mendes | RM 564666 |
 | Raphael Gomes Mancera           | RM 562279 |
 
----
+## ✅ O que o app faz
 
-## Problema escolhido e solução proposta
+- **Autenticação:** login, cadastro (sempre como tutor), sessão persistida no `expo-secure-store`,
+  **renovação automática do token** (refresh) e logout automático quando a sessão não pode ser renovada.
+- **Pets:** listar, cadastrar, editar e excluir (a exclusão remove também consultas e vacinas do pet).
+- **Consultas:** agendamento escolhendo **dia + horário livre** (a API informa só os horários disponíveis),
+  edição, cancelamento e — somente para a clínica — marcar como realizada.
+- **Vacinas:** registro com a **próxima dose calculada pela API** e carteira de vacinação por pet.
+- **Dashboard:** pets, próximas consultas, vacinas pendentes e agenda.
+- **Tema claro/escuro:** segue o sistema e pode ser fixado em *Perfil → Aparência*.
 
-### Problema
+## 🔔 Notificações (locais)
 
-Tutores e clínicas precisam centralizar o cuidado do pet (cadastro, consultas e vacinas) em um canal digital contínuo. Sem um aplicativo funcional integrado a um backend real, o acompanhamento fica fragmentado (WhatsApp, planilhas, anotações) e não há persistência nem atualização automática das informações.
+Sem servidor de push: as notificações são **locais** e nascem de eventos reais do sistema.
 
-### Solução
+| Evento | Notificação |
+|--------|-------------|
+| Usuário agenda uma consulta | Imediata: “✅ Consulta confirmada — Pet, data e hora” |
+| Consulta agendada (vinda da API, inclusive criada pelo site) | Lembrete **1 hora antes** |
+| Usuário registra uma vacina | Imediata: “💉 Vacina registrada — próxima dose em …” |
+| Vacina com próxima dose futura | Lembrete **7 dias antes**, às 09:00 |
+| Consulta cancelada/realizada ou vacina removida | O lembrete agendado é cancelado automaticamente |
 
-O app **PetCareIA+ Mobile** entrega:
+Ao tocar na notificação, o app abre a tela relacionada (consultas ou carteira de vacinas do pet),
+com o app aberto, em segundo plano ou fechado. A sincronização está em `src/services/notificationService.ts`
+e é acionada por `src/hooks/useLembretes.ts`.
 
-- Autenticação real com JWT da API Java (login, cadastro, sessão persistida e logout)
-- Navegação por rotas com Expo Router (mínimo de 6 telas distintas)
-- Integração HTTP real com TanStack Query (`useQuery` / `useMutation`), sem dados mockados
-- CRUD completo de **Pets** e **Consultas** pela interface
-- Fluxo de vacinas com próxima dose calculada pelo backend
-- Arquitetura em camadas: UI (`app/`), hooks, services e context
+## 🏗️ Arquitetura
 
----
-
-## Tecnologias utilizadas
-
-| Tecnologia | Uso no projeto |
-| --- | --- |
-| React Native + Expo SDK 51 | Base do aplicativo mobile |
-| Expo Router | Navegação e declaração de rotas |
-| TypeScript | Tipagem do código |
-| TanStack Query | Cache, loading e sincronização com a API |
-| Axios | Cliente HTTP |
-| expo-secure-store | Persistência segura do token JWT (localStorage na web) |
-| Spring Boot API (`petcare-api`) | Backend HTTP (auth, pets, consultas, vacinas, dashboard) |
-
----
-
-## Instruções para execução do projeto
-
-### Pré-requisitos
-
-- Node.js 18+  
-- npm  
-- API Java `petcare-api` rodando em `http://localhost:8080`  
-- Expo Go (celular) **ou** navegador (Expo Web) **ou** emulador Android/iOS  
-
-### 1. Subir a API (obrigatório)
-
-No repositório da API:
-
-```bash
-cd petcare-api
-mvn spring-boot:run
+```
+app/                  Telas e rotas (Expo Router) — só interface
+src/components/       Botao, CampoTexto, Cartao, Chip, TextoErro (UI reutilizável, sem estilo repetido nas telas)
+src/context/          AuthContext (sessão) e ThemeContext (tema)
+src/hooks/            TanStack Query (useConsultas, usePets, useVacinas, useLembretes...) isolados da UI
+src/services/         Acesso à API (axios + interceptors), sessão, storage, notificações
+src/theme/            Paletas clara e escura
+src/utils/            Datas (sem armadilhas de fuso horário) e mensagens de erro da API
+src/types/            Tipos TypeScript
 ```
 
-Confirme que a API responde em `http://localhost:8080/api`.
+Nenhuma tela chama HTTP diretamente: tela → hook (TanStack Query) → service → API.
 
-### 2. Instalar e iniciar o app mobile
+## ⚙️ Configuração e execução
+
+Pré-requisitos: Node.js 18+, npm, API rodando (local ou publicada).
 
 ```bash
-cd petcare-mobileChallenge-main
+git clone https://github.com/RaphaelGomesMancera/petcare-mobileChallenge.git
+cd petcare-mobileChallenge
 npm install
+cp .env.example .env     # defina EXPO_PUBLIC_API_URL
 npx expo start
 ```
 
-Opções no terminal do Expo:
+- Emulador Android: sem `.env` já funciona com `http://10.0.2.2:8080/api`.
+- Celular físico: use o IP do seu PC em `EXPO_PUBLIC_API_URL` (mesma rede Wi-Fi).
+- Conferir tipos: `npm run typecheck`.
 
-| Tecla / comando | Ambiente |
-| --- | --- |
-| `w` ou `npx expo start --web` | Navegador (web) |
-| `a` | Emulador Android |
-| `i` | Simulador iOS |
-| QR Code | Expo Go no celular |
+## 📦 Publicação
 
-### 3. URL da API por ambiente
+Pré-requisito: conta Expo (`npm i -g eas-cli`, `eas login`, `eas init`).
 
-A URL é resolvida automaticamente em `src/services/api.ts`:
+1. Edite `eas.json` e troque `https://COLE-AQUI-O-ENDERECO-DO-BACKEND/api` pelo endereço real da API (HTTPS).
+2. Gere o APK instalável: `eas build --platform android --profile preview`
+   — ao terminar, o EAS mostra o link de download/QR code. Esse é o link do app publicado.
+3. Atualizações sem novo build: `eas update --branch preview --message "descrição"`.
 
-| Ambiente | URL usada |
-| --- | --- |
-| Web / iOS | `http://localhost:8080/api` |
-| Emulador Android | `http://10.0.2.2:8080/api` |
-| Celular físico | altere para `http://SEU_IP_NA_WI-FI:8080/api` |
+## 🔐 Segurança
 
----
+- Tokens guardados no `expo-secure-store` (Keychain/Keystore), nunca em `AsyncStorage`.
+- Access token curto (1 h) + refresh token (7 dias); chamadas que recebem 401 tentam renovar **uma vez** e repetem a requisição.
+- Ao sair (ou se a sessão expirar), credenciais, cache de dados e lembretes agendados são apagados.
+- Nenhum segredo no repositório; o endereço da API vem de variável de ambiente.
 
-## Estrutura do projeto
+## 🎬 Roteiro sugerido do vídeo
 
-```text
-app/                      # Telas e rotas (Expo Router) — apenas UI
-  (auth)/                 # login, cadastro
-  (tabs)/                 # dashboard, pets, consultas, vacinas, perfil
-src/
-  services/               # Acesso HTTP (axios) — camada de dados
-  hooks/                  # TanStack Query — lógica de dados isolada da UI
-  context/                # Autenticação e sessão
-  types/                  # Tipos TypeScript
-  theme/                  # Cores do app
-```
-
-### Telas implementadas (9)
-
-1. Login  
-2. Cadastro  
-3. Dashboard  
-4. Lista de pets  
-5. Novo pet  
-6. Detalhe / edição de pet  
-7. Consultas  
-8. Vacinas do pet  
-9. Perfil (logout)  
-
----
-
-## Requisitos da Sprint 3 — como foram atendidos
-
-| Requisito avaliativo | Pontos | Atendimento |
-| --- | ---: | --- |
-| Navegação entre telas | 5 | Expo Router com rotas explícitas e 9 telas distintas |
-| Integração com API backend (HTTP) | 35 | TanStack Query + axios; dados vindos só da API; loading e atualização automática |
-| Sistema de autenticação (Login) | 20 | JWT da API Java; login + cadastro; sessão com SecureStore; rotas protegidas; logout |
-| Arquitetura e organização do código | 20 | Separação UI / hooks / services / context |
-| Documentação | 5 | Este README com problema, solução, tecnologias e como executar |
-
-### CRUD integrado à interface
-
-**Pets**
-
-| Operação | Onde no app |
-| --- | --- |
-| Create | Pets → Cadastrar pet |
-| Read | Lista e detalhe do pet |
-| Update | Detalhe → Salvar alterações |
-| Delete | Detalhe → Excluir pet |
-
-**Consultas**
-
-| Operação | Onde no app |
-| --- | --- |
-| Create | Consultas → Agendar |
-| Read | Lista “Minhas consultas” |
-| Update | Editar (PUT) ou Marcar como realizada (PATCH) |
-| Delete | Cancelar consulta |
-
-Vacinas: registrar aplicação (Create), listar carteira (Read) e excluir registro (Delete), com próxima dose calculada pela API.
-
----
-
+1. Login → mostrar tema claro/escuro em *Perfil*.
+2. Cadastrar pet → agendar consulta escolhendo dia/horário → **mostrar a notificação de confirmação** na tela.
+3. Registrar vacina → mostrar notificação e a próxima dose calculada.
+4. Tocar na notificação para abrir a tela relacionada.
+5. Entrar com a conta da clínica e marcar a consulta como realizada.
+6. Mostrar o app instalado (APK) apontando para a API publicada — **a mesma versão que está no repositório**.

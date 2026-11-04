@@ -1,26 +1,33 @@
-import { useState } from 'react';
-import {
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  StyleSheet,
-  Alert,
-  ScrollView,
-  ActivityIndicator,
-} from 'react-native';
+import { useMemo, useState } from 'react';
+import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Botao } from '@/components/Botao';
+import { Cartao } from '@/components/Cartao';
+import { CampoTexto } from '@/components/CampoTexto';
+import { Chip } from '@/components/Chip';
 import {
   useConsultas,
   useAgendarConsulta,
   useAtualizarConsulta,
   useMarcarConsultaRealizada,
   useCancelarConsulta,
+  useHorariosDisponiveis,
 } from '@/hooks/useConsultas';
 import { usePets } from '@/hooks/usePets';
-import { colors } from '@/theme/colors';
+import { useAuth } from '@/context/AuthContext';
+import { useTheme } from '@/context/ThemeContext';
+import { Palette } from '@/theme/colors';
 import { Consulta } from '@/types';
+import { formatarDataHoraBR, proximosDias } from '@/utils/datas';
+import { mensagemDeErro } from '@/utils/erros';
+
+const DIAS_NA_AGENDA = 14;
 
 export default function ConsultasScreen() {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const { usuario } = useAuth();
+  const ehClinica = usuario?.perfil === 'CLINICA';
+
   const { data: consultas, isLoading } = useConsultas();
   const { data: pets } = usePets();
   const agendarConsulta = useAgendarConsulta();
@@ -29,62 +36,83 @@ export default function ConsultasScreen() {
   const cancelarConsulta = useCancelarConsulta();
 
   const [petSelecionadoId, setPetSelecionadoId] = useState<number | null>(null);
-  const [dataHora, setDataHora] = useState('');
+  const [dia, setDia] = useState<string | null>(null);
+  const [hora, setHora] = useState<string | null>(null);
   const [motivo, setMotivo] = useState('');
-  const [editandoId, setEditandoId] = useState<number | null>(null);
+  const [editando, setEditando] = useState<Consulta | null>(null);
+
+  const dias = useMemo(() => proximosDias(DIAS_NA_AGENDA), []);
+  const { data: horariosLivres, isFetching: carregandoHorarios } = useHorariosDisponiveis(dia);
+
+  // Ao editar, o horário atual da própria consulta aparece como opção (a API o considera ocupado)
+  const horarios = useMemo(() => {
+    const lista = new Set(horariosLivres ?? []);
+    if (editando && dia && editando.dataHora.slice(0, 10) === dia) {
+      lista.add(editando.dataHora.slice(11, 16));
+    }
+    return Array.from(lista).sort();
+  }, [horariosLivres, editando, dia]);
+
+  const consultasOrdenadas = useMemo(
+    () => [...(consultas ?? [])].sort((a, b) => b.dataHora.localeCompare(a.dataHora)),
+    [consultas],
+  );
 
   function limparFormulario() {
-    setDataHora('');
+    setDia(null);
+    setHora(null);
     setMotivo('');
     setPetSelecionadoId(null);
-    setEditandoId(null);
+    setEditando(null);
   }
 
   function iniciarEdicao(consulta: Consulta) {
-    setEditandoId(consulta.id);
+    setEditando(consulta);
     setPetSelecionadoId(consulta.petId);
-    setDataHora(consulta.dataHora.slice(0, 19));
+    setDia(consulta.dataHora.slice(0, 10));
+    setHora(consulta.dataHora.slice(11, 16));
     setMotivo(consulta.motivo);
   }
 
+  function escolherDia(iso: string) {
+    setDia(iso);
+    setHora(null);
+  }
+
   async function salvar() {
-    if (!petSelecionadoId || !dataHora || !motivo) {
-      Alert.alert('Atenção', 'Selecione o pet e preencha data/hora e motivo');
+    if (!petSelecionadoId || !dia || !hora || !motivo.trim()) {
+      Alert.alert('Atenção', 'Escolha o pet, o dia, o horário e informe o motivo');
       return;
     }
 
     const payload = {
       petId: petSelecionadoId,
-      dataHora,
-      motivo,
+      dataHora: `${dia}T${hora}:00`,
+      motivo: motivo.trim(),
       observacoes: null,
     };
 
     try {
-      if (editandoId) {
-        await atualizarConsulta.mutateAsync({ id: editandoId, payload });
-        Alert.alert('Consulta atualizada!', 'Os dados foram salvos na API.');
+      if (editando) {
+        await atualizarConsulta.mutateAsync({ id: editando.id, payload });
+        Alert.alert('Consulta atualizada!', 'Os dados foram salvos.');
       } else {
         await agendarConsulta.mutateAsync(payload);
-        Alert.alert('Consulta agendada!', 'Você pode acompanhar na sua agenda.');
+        Alert.alert('Consulta agendada!', 'Você receberá um lembrete 1 hora antes.');
       }
       limparFormulario();
-    } catch (e: any) {
-      const mensagem =
-        e?.response?.data?.mensagem ??
-        e?.response?.data?.message ??
-        'Não foi possível salvar. Verifique conflitos de horário.';
-      Alert.alert(editandoId ? 'Erro ao atualizar' : 'Erro ao agendar', mensagem);
+    } catch (e) {
+      Alert.alert(
+        editando ? 'Erro ao atualizar' : 'Erro ao agendar',
+        mensagemDeErro(e, 'Não foi possível salvar. Tente novamente.'),
+      );
     }
   }
 
   function marcarComoRealizada(id: number) {
     Alert.alert('Marcar como realizada', 'Confirma que a consulta já aconteceu?', [
       { text: 'Não', style: 'cancel' },
-      {
-        text: 'Sim',
-        onPress: () => marcarRealizada.mutate(id),
-      },
+      { text: 'Sim', onPress: () => marcarRealizada.mutate(id) },
     ]);
   }
 
@@ -98,67 +126,85 @@ export default function ConsultasScreen() {
   const salvando = agendarConsulta.isPending || atualizarConsulta.isPending;
 
   return (
-    <ScrollView style={styles.container}>
-      <View style={styles.card}>
-        <Text style={styles.tituloCard}>{editandoId ? 'Editar consulta' : 'Agendar consulta'}</Text>
+    <ScrollView style={styles.container} keyboardShouldPersistTaps="handled">
+      <Cartao titulo={editando ? 'Editar consulta' : 'Agendar consulta'}>
 
         <Text style={styles.rotulo}>Pet</Text>
+        {(pets ?? []).length === 0 && (
+          <Text style={styles.textoSecundario}>Cadastre um pet na aba “Meus Pets” para agendar.</Text>
+        )}
         <View style={styles.chips}>
           {(pets ?? []).map((pet) => (
-            <TouchableOpacity
+            <Chip
               key={pet.id}
-              style={[styles.chip, petSelecionadoId === pet.id && styles.chipSelecionado]}
+              rotulo={pet.nome}
+              selecionado={petSelecionadoId === pet.id}
               onPress={() => setPetSelecionadoId(pet.id)}
-            >
-              <Text style={petSelecionadoId === pet.id ? styles.chipTextoSelecionado : styles.chipTexto}>
-                {pet.nome}
-              </Text>
-            </TouchableOpacity>
+            />
           ))}
         </View>
 
-        <TextInput
-          style={styles.input}
-          placeholder="Data/hora (ex: 2026-09-20T14:30:00)"
-          value={dataHora}
-          onChangeText={setDataHora}
-        />
-        <TextInput style={styles.input} placeholder="Motivo da consulta" value={motivo} onChangeText={setMotivo} />
+        <Text style={styles.rotulo}>Dia</Text>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.diasLista}>
+          {dias.map((d) => (
+            <Chip
+              key={d.iso}
+              rotulo={d.diaSemana}
+              subrotulo={d.dia}
+              selecionado={dia === d.iso}
+              onPress={() => escolherDia(d.iso)}
+            />
+          ))}
+        </ScrollView>
 
-        <TouchableOpacity style={styles.botao} onPress={salvar} disabled={salvando}>
-          {salvando ? (
-            <ActivityIndicator color={colors.branco} />
-          ) : (
-            <Text style={styles.botaoTexto}>{editandoId ? 'Salvar alterações' : 'Agendar consulta'}</Text>
-          )}
-        </TouchableOpacity>
-
-        {editandoId && (
-          <TouchableOpacity style={styles.botaoSecundario} onPress={limparFormulario}>
-            <Text style={styles.botaoSecundarioTexto}>Cancelar edição</Text>
-          </TouchableOpacity>
+        {dia && (
+          <>
+            <Text style={styles.rotulo}>Horário (atendimento das 08:00 às 18:00)</Text>
+            {carregandoHorarios && <ActivityIndicator color={colors.azul} style={{ marginVertical: 8 }} />}
+            {!carregandoHorarios && horarios.length === 0 && (
+              <Text style={styles.textoSecundario}>Sem horários livres neste dia. Escolha outro dia.</Text>
+            )}
+            <View style={styles.chips}>
+              {horarios.map((h) => (
+                <Chip key={h} rotulo={h} selecionado={hora === h} onPress={() => setHora(h)} />
+              ))}
+            </View>
+          </>
         )}
-      </View>
 
-      <View style={styles.card}>
-        <Text style={styles.tituloCard}>Minhas consultas</Text>
+        <CampoTexto placeholder="Motivo da consulta" value={motivo} onChangeText={setMotivo} />
+
+        <Botao
+          titulo={editando ? 'Salvar alterações' : 'Agendar consulta'}
+          onPress={salvar}
+          carregando={salvando}
+        />
+
+        {editando && (
+          <Botao titulo="Cancelar edição" variante="secundario" style={styles.espaco} onPress={limparFormulario} />
+        )}
+      </Cartao>
+
+      <Cartao titulo={ehClinica ? 'Agenda da clínica' : 'Minhas consultas'}>
         {isLoading && <ActivityIndicator color={colors.azul} style={{ marginVertical: 12 }} />}
-        {(consultas ?? []).map((consulta: Consulta) => (
+        {consultasOrdenadas.map((consulta) => (
           <View key={consulta.id} style={styles.itemConsulta}>
             <Text style={styles.itemTitulo}>
               {consulta.petNome} — {consulta.status}
             </Text>
             <Text style={styles.textoSecundario}>
-              {new Date(consulta.dataHora).toLocaleString('pt-BR')} • {consulta.motivo}
+              {formatarDataHoraBR(consulta.dataHora)} • {consulta.motivo}
             </Text>
             {consulta.status === 'AGENDADA' && (
               <View style={styles.acoes}>
                 <TouchableOpacity onPress={() => iniciarEdicao(consulta)}>
                   <Text style={styles.linkEditar}>Editar</Text>
                 </TouchableOpacity>
-                <TouchableOpacity onPress={() => marcarComoRealizada(consulta.id)}>
-                  <Text style={styles.linkRealizar}>Realizar</Text>
-                </TouchableOpacity>
+                {ehClinica && (
+                  <TouchableOpacity onPress={() => marcarComoRealizada(consulta.id)}>
+                    <Text style={styles.linkRealizar}>Realizar</Text>
+                  </TouchableOpacity>
+                )}
                 <TouchableOpacity onPress={() => cancelar(consulta.id)}>
                   <Text style={styles.linkCancelar}>Cancelar</Text>
                 </TouchableOpacity>
@@ -169,51 +215,23 @@ export default function ConsultasScreen() {
         {!isLoading && consultas?.length === 0 && (
           <Text style={styles.textoSecundario}>Nenhuma consulta ainda.</Text>
         )}
-      </View>
+      </Cartao>
     </ScrollView>
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.fundo, padding: 16 },
-  card: { backgroundColor: colors.branco, borderRadius: 12, padding: 16, marginBottom: 16 },
-  tituloCard: { fontSize: 16, fontWeight: 'bold', color: colors.azul, marginBottom: 10 },
-  rotulo: { fontSize: 13, color: colors.textoSecundario, marginBottom: 6 },
-  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 12 },
-  chip: {
-    borderWidth: 1,
-    borderColor: colors.azul,
-    borderRadius: 20,
-    paddingVertical: 6,
-    paddingHorizontal: 14,
-  },
-  chipSelecionado: { backgroundColor: colors.azul },
-  chipTexto: { color: colors.azul },
-  chipTextoSelecionado: { color: colors.branco },
-  input: {
-    backgroundColor: colors.fundo,
-    borderWidth: 1,
-    borderColor: colors.borda,
-    borderRadius: 10,
-    padding: 12,
-    marginBottom: 10,
-  },
-  botao: { backgroundColor: colors.verde, borderRadius: 10, padding: 14, alignItems: 'center' },
-  botaoTexto: { color: colors.branco, fontWeight: 'bold' },
-  botaoSecundario: {
-    marginTop: 10,
-    borderWidth: 1,
-    borderColor: colors.azul,
-    borderRadius: 10,
-    padding: 12,
-    alignItems: 'center',
-  },
-  botaoSecundarioTexto: { color: colors.azul, fontWeight: 'bold' },
-  itemConsulta: { paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: colors.borda },
-  itemTitulo: { fontWeight: 'bold' },
-  textoSecundario: { color: colors.textoSecundario },
-  acoes: { flexDirection: 'row', gap: 16, marginTop: 8 },
-  linkEditar: { color: colors.azul, fontWeight: '600' },
-  linkRealizar: { color: colors.verde, fontWeight: '600' },
-  linkCancelar: { color: colors.erro, fontWeight: '600' },
-});
+const makeStyles = (colors: Palette) =>
+  StyleSheet.create({
+    container: { flex: 1, backgroundColor: colors.fundo, padding: 16 },
+    rotulo: { fontSize: 13, color: colors.textoSecundario, marginBottom: 6, marginTop: 4 },
+    chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 12 },
+    diasLista: { gap: 8, paddingBottom: 12 },
+    espaco: { marginTop: 10 },
+    itemConsulta: { paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: colors.borda },
+    itemTitulo: { fontWeight: 'bold', color: colors.texto },
+    textoSecundario: { color: colors.textoSecundario },
+    acoes: { flexDirection: 'row', gap: 16, marginTop: 8 },
+    linkEditar: { color: colors.azul, fontWeight: '600' },
+    linkRealizar: { color: colors.verde, fontWeight: '600' },
+    linkCancelar: { color: colors.erro, fontWeight: '600' },
+  });

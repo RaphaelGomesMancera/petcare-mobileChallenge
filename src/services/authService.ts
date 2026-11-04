@@ -1,16 +1,16 @@
 import { api } from './api';
-import { AuthResponse, Perfil } from '@/types';
+import { AuthResponse } from '@/types';
 
 export interface LoginPayload {
   email: string;
   senha: string;
 }
 
+/** O perfil não é enviado: a API cadastra sempre como TUTOR. */
 export interface RegistroPayload {
   nome: string;
   email: string;
   senha: string;
-  perfil: Perfil;
 }
 
 export const authService = {

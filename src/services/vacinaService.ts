@@ -8,6 +8,11 @@ export interface VacinaPayload {
 }
 
 export const vacinaService = {
+  listarTodas: async (): Promise<Vacina[]> => {
+    const { data } = await api.get<Vacina[]>('/vacinas');
+    return data;
+  },
+
   listarPorPet: async (petId: number): Promise<Vacina[]> => {
     const { data } = await api.get<Vacina[]>(`/vacinas/pet/${petId}`);
     return data;

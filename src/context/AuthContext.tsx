@@ -1,8 +1,11 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
-import { storage } from '@/services/storage';
+import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
+import { registrarAoExpirarSessao } from '@/services/api';
 import { authService, LoginPayload, RegistroPayload } from '@/services/authService';
-import { TOKEN_KEY } from '@/services/api';
-import { Usuario } from '@/types';
+import { cancelarTodosLembretes } from '@/services/notificationService';
+import { lerRefreshToken, lerToken, limparTokens, salvarTokens } from '@/services/session';
+import { storage } from '@/services/storage';
+import { AuthResponse, Usuario } from '@/types';
 
 const USUARIO_KEY = 'petcare_usuario';
 
@@ -17,48 +20,59 @@ interface AuthContextData {
 const AuthContext = createContext<AuthContextData | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
+  const queryClient = useQueryClient();
   const [usuario, setUsuario] = useState<Usuario | null>(null);
   const [carregando, setCarregando] = useState(true);
 
-  // Ao abrir o app, tenta restaurar a sessão salva (persistência exigida pela sprint)
+  /** Encerra a sessão local: apaga credenciais, dados em cache e lembretes agendados do usuário. */
+  const encerrarSessao = useCallback(async () => {
+    await limparTokens();
+    await storage.removeItem(USUARIO_KEY);
+    await cancelarTodosLembretes();
+    queryClient.clear();
+    setUsuario(null);
+  }, [queryClient]);
+
+  // Ao abrir o app, restaura a sessão salva (persistência)
   useEffect(() => {
     async function restaurarSessao() {
       const usuarioSalvo = await storage.getItem(USUARIO_KEY);
-      const token = await storage.getItem(TOKEN_KEY);
+      const token = await lerToken();
+      const refreshToken = await lerRefreshToken();
 
-      if (usuarioSalvo && token) {
-        setUsuario(JSON.parse(usuarioSalvo));
+      if (usuarioSalvo && token && refreshToken) {
+        setUsuario(JSON.parse(usuarioSalvo) as Usuario);
       }
       setCarregando(false);
     }
     restaurarSessao();
   }, []);
 
-  async function persistirSessao(resposta: { token: string; nome: string; email: string; perfil: Usuario['perfil'] }) {
+  // Quando a API não aceita mais o token nem consegue renová-lo, volta para o login
+  useEffect(() => {
+    registrarAoExpirarSessao(() => {
+      encerrarSessao();
+    });
+    return () => registrarAoExpirarSessao(null);
+  }, [encerrarSessao]);
+
+  async function persistirSessao(resposta: AuthResponse) {
     const dadosUsuario: Usuario = { nome: resposta.nome, email: resposta.email, perfil: resposta.perfil };
-    await storage.setItem(TOKEN_KEY, resposta.token);
+    await salvarTokens(resposta.token, resposta.refreshToken);
     await storage.setItem(USUARIO_KEY, JSON.stringify(dadosUsuario));
     setUsuario(dadosUsuario);
   }
 
   async function login(payload: LoginPayload) {
-    const resposta = await authService.login(payload);
-    await persistirSessao(resposta);
+    await persistirSessao(await authService.login(payload));
   }
 
   async function registrar(payload: RegistroPayload) {
-    const resposta = await authService.registrar(payload);
-    await persistirSessao(resposta);
-  }
-
-  async function logout() {
-    await storage.removeItem(TOKEN_KEY);
-    await storage.removeItem(USUARIO_KEY);
-    setUsuario(null);
+    await persistirSessao(await authService.registrar(payload));
   }
 
   return (
-    <AuthContext.Provider value={{ usuario, carregando, login, registrar, logout }}>
+    <AuthContext.Provider value={{ usuario, carregando, login, registrar, logout: encerrarSessao }}>
       {children}
     </AuthContext.Provider>
   );

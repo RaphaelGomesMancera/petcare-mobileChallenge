@@ -1,19 +1,22 @@
-import { useState } from 'react';
-import {
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  StyleSheet,
-  ScrollView,
-  Alert,
-  ActivityIndicator,
-} from 'react-native';
+import { useMemo, useState } from 'react';
+import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Botao } from '@/components/Botao';
+import { Cartao } from '@/components/Cartao';
+import { CampoTexto } from '@/components/CampoTexto';
+import { Chip } from '@/components/Chip';
 import { useLocalSearchParams } from 'expo-router';
 import { useVacinasPorPet, useAplicarVacina, useExcluirVacina } from '@/hooks/useVacinas';
-import { colors } from '@/theme/colors';
+import { useTheme } from '@/context/ThemeContext';
+import { Palette } from '@/theme/colors';
+import { formatarDataBR, hojeISO } from '@/utils/datas';
+import { mensagemDeErro } from '@/utils/erros';
+
+const SUGESTOES_VACINAS = ['V10', 'V8', 'Antirrábica', 'Giárdia', 'Gripe canina'];
+const FORMATO_DATA = /^\d{4}-\d{2}-\d{2}$/;
 
 export default function VacinasScreen() {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const { petId } = useLocalSearchParams<{ petId: string }>();
   const idNumerico = Number(petId);
 
@@ -22,20 +25,24 @@ export default function VacinasScreen() {
   const excluirVacina = useExcluirVacina();
 
   const [nome, setNome] = useState('');
-  const [dataAplicacao, setDataAplicacao] = useState('');
+  const [dataAplicacao, setDataAplicacao] = useState(hojeISO());
 
   async function aplicar() {
-    if (!nome || !dataAplicacao) {
-      Alert.alert('Atenção', 'Preencha o nome da vacina e a data de aplicação');
+    if (!nome.trim()) {
+      Alert.alert('Atenção', 'Informe o nome da vacina');
+      return;
+    }
+    if (!FORMATO_DATA.test(dataAplicacao)) {
+      Alert.alert('Atenção', 'Use a data no formato AAAA-MM-DD (ex.: 2026-10-26)');
       return;
     }
     try {
-      await aplicarVacina.mutateAsync({ petId: idNumerico, nome, dataAplicacao });
+      await aplicarVacina.mutateAsync({ petId: idNumerico, nome: nome.trim(), dataAplicacao });
       setNome('');
-      setDataAplicacao('');
-      Alert.alert('Vacina registrada!', 'A próxima dose foi calculada automaticamente pela API.');
-    } catch {
-      Alert.alert('Erro', 'Não foi possível registrar a vacina.');
+      setDataAplicacao(hojeISO());
+      Alert.alert('Vacina registrada!', 'A próxima dose foi calculada automaticamente.');
+    } catch (e) {
+      Alert.alert('Erro', mensagemDeErro(e, 'Não foi possível registrar a vacina.'));
     }
   }
 
@@ -51,27 +58,26 @@ export default function VacinasScreen() {
   }
 
   return (
-    <ScrollView style={styles.container}>
-      <View style={styles.card}>
-        <Text style={styles.tituloCard}>Registrar aplicação</Text>
-        <TextInput style={styles.input} placeholder="Nome da vacina (ex: V10)" value={nome} onChangeText={setNome} />
-        <TextInput
-          style={styles.input}
-          placeholder="Data de aplicação (ex: 2026-09-12)"
+    <ScrollView style={styles.container} keyboardShouldPersistTaps="handled">
+      <Cartao titulo="Registrar aplicação">
+
+        <View style={styles.chips}>
+          {SUGESTOES_VACINAS.map((sugestao) => (
+            <Chip key={sugestao} rotulo={sugestao} selecionado={nome === sugestao} onPress={() => setNome(sugestao)} />
+          ))}
+        </View>
+
+        <CampoTexto placeholder="Nome da vacina (ou escolha acima)" value={nome} onChangeText={setNome} />
+        <CampoTexto
+          placeholder="Data de aplicação (AAAA-MM-DD)"
           value={dataAplicacao}
           onChangeText={setDataAplicacao}
+          keyboardType="numbers-and-punctuation"
         />
-        <TouchableOpacity style={styles.botao} onPress={aplicar} disabled={aplicarVacina.isPending}>
-          {aplicarVacina.isPending ? (
-            <ActivityIndicator color={colors.branco} />
-          ) : (
-            <Text style={styles.botaoTexto}>Registrar vacina</Text>
-          )}
-        </TouchableOpacity>
-      </View>
+        <Botao titulo="Registrar vacina" onPress={aplicar} carregando={aplicarVacina.isPending} />
+      </Cartao>
 
-      <View style={styles.card}>
-        <Text style={styles.tituloCard}>Carteira de vacinação</Text>
+      <Cartao titulo="Carteira de vacinação">
         {isLoading && <ActivityIndicator color={colors.azul} style={{ marginVertical: 12 }} />}
         {(vacinas ?? []).map((vacina) => (
           <View key={vacina.id} style={styles.item}>
@@ -79,9 +85,8 @@ export default function VacinasScreen() {
               {vacina.nome} {vacina.pendente ? '⚠️' : ''}
             </Text>
             <Text style={styles.textoSecundario}>
-              Aplicada em {new Date(vacina.dataAplicacao).toLocaleDateString('pt-BR')}
-              {vacina.dataProximaDose &&
-                ` • Próxima dose: ${new Date(vacina.dataProximaDose).toLocaleDateString('pt-BR')}`}
+              Aplicada em {formatarDataBR(vacina.dataAplicacao)}
+              {vacina.dataProximaDose && ` • Próxima dose: ${formatarDataBR(vacina.dataProximaDose)}`}
             </Text>
             <TouchableOpacity onPress={() => confirmarExclusao(vacina.id, vacina.nome)}>
               <Text style={styles.linkExcluir}>Excluir</Text>
@@ -91,27 +96,17 @@ export default function VacinasScreen() {
         {!isLoading && vacinas?.length === 0 && (
           <Text style={styles.textoSecundario}>Nenhuma vacina registrada.</Text>
         )}
-      </View>
+      </Cartao>
     </ScrollView>
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.fundo, padding: 16 },
-  card: { backgroundColor: colors.branco, borderRadius: 12, padding: 16, marginBottom: 16 },
-  tituloCard: { fontSize: 16, fontWeight: 'bold', color: colors.azul, marginBottom: 10 },
-  input: {
-    backgroundColor: colors.fundo,
-    borderWidth: 1,
-    borderColor: colors.borda,
-    borderRadius: 10,
-    padding: 12,
-    marginBottom: 10,
-  },
-  botao: { backgroundColor: colors.verde, borderRadius: 10, padding: 14, alignItems: 'center' },
-  botaoTexto: { color: colors.branco, fontWeight: 'bold' },
-  item: { paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: colors.borda },
-  itemTitulo: { fontWeight: 'bold' },
-  textoSecundario: { color: colors.textoSecundario },
-  linkExcluir: { color: colors.erro, marginTop: 6, fontWeight: '600' },
-});
+const makeStyles = (colors: Palette) =>
+  StyleSheet.create({
+    container: { flex: 1, backgroundColor: colors.fundo, padding: 16 },
+    chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 12 },
+    item: { paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: colors.borda },
+    itemTitulo: { fontWeight: 'bold', color: colors.texto },
+    textoSecundario: { color: colors.textoSecundario },
+    linkExcluir: { color: colors.erro, marginTop: 6, fontWeight: '600' },
+  });

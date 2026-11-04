@@ -37,6 +37,11 @@ export function useExcluirPet() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (id: number) => petService.excluir(id),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['pets'] }),
+    onSuccess: () => {
+      // A API remove também as consultas e vacinas do pet: atualiza tudo que dependia dele
+      ['pets', 'consultas', 'vacinas', 'dashboard'].forEach((chave) =>
+        queryClient.invalidateQueries({ queryKey: [chave] }),
+      );
+    },
   });
 }

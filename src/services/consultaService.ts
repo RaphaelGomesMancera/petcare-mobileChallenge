@@ -14,6 +14,12 @@ export const consultaService = {
     return data;
   },
 
+  /** Horários (HH:mm) livres no dia AAAA-MM-DD. */
+  horariosDisponiveis: async (data: string): Promise<string[]> => {
+    const resposta = await api.get<string[]>('/consultas/horarios-disponiveis', { params: { data } });
+    return resposta.data;
+  },
+
   agendar: async (payload: ConsultaPayload): Promise<Consulta> => {
     const { data } = await api.post<Consulta>('/consultas/agendar', payload);
     return data;

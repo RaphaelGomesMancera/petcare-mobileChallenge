@@ -1,19 +1,16 @@
-import { useEffect, useState } from 'react';
-import {
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  StyleSheet,
-  ScrollView,
-  Alert,
-  ActivityIndicator,
-} from 'react-native';
+import { useEffect, useMemo, useState } from 'react';
+import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
-import { usePet, useAtualizarPet, useExcluirPet } from '@/hooks/usePets';
-import { colors } from '@/theme/colors';
+import { Botao } from '@/components/Botao';
+import { CampoTexto } from '@/components/CampoTexto';
+import { useTheme } from '@/context/ThemeContext';
+import { useAtualizarPet, useExcluirPet, usePet } from '@/hooks/usePets';
+import { Palette } from '@/theme/colors';
+import { mensagemDeErro } from '@/utils/erros';
 
 export default function DetalhePetScreen() {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const { id } = useLocalSearchParams<{ id: string }>();
   const petId = Number(id);
 
@@ -34,35 +31,47 @@ export default function DetalhePetScreen() {
   }, [pet]);
 
   async function salvar() {
+    if (!nome.trim() || !raca.trim()) {
+      Alert.alert('Atenção', 'Nome e raça são obrigatórios');
+      return;
+    }
     try {
       await atualizarPet.mutateAsync({
         id: petId,
         payload: {
-          nome,
-          raca,
+          nome: nome.trim(),
+          raca: raca.trim(),
           dataNascimento: pet?.dataNascimento ?? null,
           peso: peso ? Number(peso.replace(',', '.')) : null,
           fotoUrl: pet?.fotoUrl ?? null,
         },
       });
       Alert.alert('Pronto', 'Dados do pet atualizados!');
-    } catch {
-      Alert.alert('Erro', 'Não foi possível atualizar o pet.');
+    } catch (e) {
+      Alert.alert('Erro', mensagemDeErro(e, 'Não foi possível atualizar o pet.'));
     }
   }
 
   function confirmarExclusao() {
-    Alert.alert('Excluir pet', `Tem certeza que deseja excluir ${pet?.nome}?`, [
-      { text: 'Cancelar', style: 'cancel' },
-      {
-        text: 'Excluir',
-        style: 'destructive',
-        onPress: async () => {
-          await excluirPet.mutateAsync(petId);
-          router.back();
+    Alert.alert(
+      'Excluir pet',
+      `Excluir ${pet?.nome}? As consultas e vacinas dele também serão removidas.`,
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Excluir',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await excluirPet.mutateAsync(petId);
+              router.back();
+            } catch (e) {
+              Alert.alert('Erro', mensagemDeErro(e, 'Não foi possível excluir o pet.'));
+            }
+          },
         },
-      },
-    ]);
+      ],
+    );
   }
 
   if (isLoading || !pet) {
@@ -74,56 +83,30 @@ export default function DetalhePetScreen() {
   }
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
+    <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
       <Text style={styles.titulo}>{pet.nome}</Text>
 
-      <TextInput style={styles.input} value={nome} onChangeText={setNome} placeholder="Nome" />
-      <TextInput style={styles.input} value={raca} onChangeText={setRaca} placeholder="Raça" />
-      <TextInput
-        style={styles.input}
-        value={peso}
-        onChangeText={setPeso}
-        placeholder="Peso (kg)"
-        keyboardType="numeric"
-      />
+      <CampoTexto value={nome} onChangeText={setNome} placeholder="Nome" />
+      <CampoTexto value={raca} onChangeText={setRaca} placeholder="Raça" />
+      <CampoTexto value={peso} onChangeText={setPeso} placeholder="Peso (kg)" keyboardType="numeric" />
 
-      <TouchableOpacity style={styles.botao} onPress={salvar} disabled={atualizarPet.isPending}>
-        {atualizarPet.isPending ? (
-          <ActivityIndicator color={colors.branco} />
-        ) : (
-          <Text style={styles.botaoTexto}>Salvar alterações</Text>
-        )}
-      </TouchableOpacity>
-
-      <TouchableOpacity
-        style={styles.botaoSecundario}
+      <Botao titulo="Salvar alterações" onPress={salvar} carregando={atualizarPet.isPending} />
+      <Botao
+        titulo="💉 Ver carteira de vacinação"
+        variante="secundario"
+        style={styles.espaco}
         onPress={() => router.push(`/(tabs)/vacinas/${petId}`)}
-      >
-        <Text style={styles.botaoSecundarioTexto}>💉 Ver carteira de vacinação</Text>
-      </TouchableOpacity>
-
-      <TouchableOpacity style={styles.botaoExcluir} onPress={confirmarExclusao}>
-        <Text style={styles.botaoTexto}>Excluir pet</Text>
-      </TouchableOpacity>
+      />
+      <Botao titulo="Excluir pet" variante="perigo" style={styles.espacoGrande} onPress={confirmarExclusao} />
     </ScrollView>
   );
 }
 
-const styles = StyleSheet.create({
-  container: { padding: 24, backgroundColor: colors.fundo, flexGrow: 1 },
-  centro: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  titulo: { fontSize: 22, fontWeight: 'bold', color: colors.azul, marginBottom: 20 },
-  input: {
-    backgroundColor: colors.branco,
-    borderWidth: 1,
-    borderColor: colors.borda,
-    borderRadius: 10,
-    padding: 14,
-    marginBottom: 12,
-  },
-  botao: { backgroundColor: colors.verde, borderRadius: 10, padding: 16, alignItems: 'center', marginTop: 8 },
-  botaoSecundario: { backgroundColor: colors.branco, borderWidth: 1, borderColor: colors.azul, borderRadius: 10, padding: 16, alignItems: 'center', marginTop: 12 },
-  botaoExcluir: { backgroundColor: colors.erro, borderRadius: 10, padding: 16, alignItems: 'center', marginTop: 24 },
-  botaoTexto: { color: colors.branco, fontWeight: 'bold' },
-  botaoSecundarioTexto: { color: colors.azul, fontWeight: 'bold' },
-});
+const makeStyles = (colors: Palette) =>
+  StyleSheet.create({
+    container: { padding: 24, backgroundColor: colors.fundo, flexGrow: 1 },
+    centro: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+    titulo: { fontSize: 22, fontWeight: 'bold', color: colors.azul, marginBottom: 20 },
+    espaco: { marginTop: 12 },
+    espacoGrande: { marginTop: 24 },
+  });

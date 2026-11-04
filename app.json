@@ -5,7 +5,7 @@
     "scheme": "petcareia",
     "version": "1.0.0",
     "orientation": "portrait",
-    "userInterfaceStyle": "light",
+    "userInterfaceStyle": "automatic",
     "splash": {
       "backgroundColor": "#1a5fb4"
     },
@@ -17,6 +17,14 @@
       "package": "br.com.petcare.mobile",
       "usesCleartextTraffic": true
     },
-    "plugins": ["expo-router"]
+    "plugins": [
+      "expo-router",
+      [
+        "expo-notifications",
+        {
+          "color": "#1a5fb4"
+        }
+      ]
+    ]
   }
 }

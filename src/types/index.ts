@@ -8,6 +8,7 @@ export interface Usuario {
 
 export interface AuthResponse {
   token: string;
+  refreshToken: string;
   nome: string;
   email: string;
   perfil: Perfil;
