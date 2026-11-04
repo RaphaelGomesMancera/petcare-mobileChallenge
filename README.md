@@ -4,7 +4,7 @@ App **React Native + Expo** do PetCareIA+: tutores acompanham pets, agendam cons
 a clínica conduz a agenda. Consome a API Java do projeto ([petcare-api](https://github.com/RaphaelGomesMancera/petcare-api)).
 
 > **App publicado (APK/link):** `<COLE_AQUI_O_LINK_DO_APK_OU_DA_PUBLICAÇÃO>`
-> **API em produção:** `<COLE_AQUI_O_LINK_DO_BACKEND>`
+> **API em produção:** https://petcare-api-aod8.onrender.com
 > **Vídeo de demonstração:** `<COLE_AQUI_O_LINK_DO_VÍDEO>`
 
 ## 👥 Integrantes
@@ -78,7 +78,7 @@ npx expo start
 
 Pré-requisito: conta Expo (`npm i -g eas-cli`, `eas login`, `eas init`).
 
-1. Edite `eas.json` e troque `https://COLE-AQUI-O-ENDERECO-DO-BACKEND/api` pelo endereço real da API (HTTPS).
+1. O `eas.json` já aponta para `https://petcare-api-aod8.onrender.com/api`.
 2. Gere o APK instalável: `eas build --platform android --profile preview`
    — ao terminar, o EAS mostra o link de download/QR code. Esse é o link do app publicado.
 3. Atualizações sem novo build: `eas update --branch preview --message "descrição"`.

@@ -8,13 +8,13 @@
       "distribution": "internal",
       "android": { "buildType": "apk" },
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://COLE-AQUI-O-ENDERECO-DO-BACKEND/api"
+        "EXPO_PUBLIC_API_URL": "https://petcare-api-aod8.onrender.com/api"
       }
     },
     "production": {
       "android": { "buildType": "app-bundle" },
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://COLE-AQUI-O-ENDERECO-DO-BACKEND/api"
+        "EXPO_PUBLIC_API_URL": "https://petcare-api-aod8.onrender.com/api"
       }
     }
   }
