@@ -18,7 +18,10 @@
     },
     "android": {
       "package": "br.com.petcare.mobile",
-      "usesCleartextTraffic": true
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/logo.png",
+        "backgroundColor": "#eef6f4"
+      }
     },
     "web": {
       "favicon": "./assets/logo.png",
