@@ -20,6 +20,10 @@
       "package": "br.com.petcare.mobile",
       "usesCleartextTraffic": true
     },
+    "web": {
+      "favicon": "./assets/logo.png",
+      "bundler": "metro"
+    },
     "plugins": [
       "expo-router",
       [
@@ -28,6 +32,15 @@
           "color": "#0b5cad"
         }
       ]
-    ]
+    ],
+    "extra": {
+      "router": {
+        "origin": false
+      },
+      "eas": {
+        "projectId": "7ff2aa53-611c-454d-b27e-15d915e31bb5"
+      }
+    },
+    "owner": "raphaelmancera010"
   }
 }

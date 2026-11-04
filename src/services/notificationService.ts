@@ -23,16 +23,18 @@ export interface DadosNotificacao {
   petId: number;
 }
 
-// Mostra o aviso mesmo com o app aberto (foreground)
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowAlert: true,
-    shouldPlaySound: true,
-    shouldSetBadge: false,
-  }),
-});
-
 const suportado = Platform.OS !== 'web';
+
+// No navegador o Expo não entrega notificação de verdade. No celular, mostra mesmo com o app aberto.
+if (suportado) {
+  Notifications.setNotificationHandler({
+    handleNotification: async () => ({
+      shouldShowAlert: true,
+      shouldPlaySound: true,
+      shouldSetBadge: false,
+    }),
+  });
+}
 
 /** Cria o canal (Android) e pede permissão. Devolve se as notificações podem ser exibidas. */
 export async function prepararNotificacoes(): Promise<boolean> {

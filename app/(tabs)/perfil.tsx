@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { Alert, StyleSheet, Text, View } from 'react-native';
+import { Alert, Platform, StyleSheet, Text, View } from 'react-native';
 import { router } from 'expo-router';
 import { Botao } from '@/components/Botao';
 import { Chip } from '@/components/Chip';
@@ -18,17 +18,21 @@ export default function PerfilScreen() {
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const { usuario, logout } = useAuth();
 
+  async function sair() {
+    await logout();
+    router.replace('/(auth)/login');
+  }
+
   function handleLogout() {
+    if (Platform.OS === 'web') {
+      if (window.confirm('Deseja realmente sair da sua conta?')) {
+        void sair();
+      }
+      return;
+    }
     Alert.alert('Sair', 'Deseja realmente sair da sua conta?', [
       { text: 'Cancelar', style: 'cancel' },
-      {
-        text: 'Sair',
-        style: 'destructive',
-        onPress: async () => {
-          await logout();
-          router.replace('/(auth)/login');
-        },
-      },
+      { text: 'Sair', style: 'destructive', onPress: () => void sair() },
     ]);
   }
 

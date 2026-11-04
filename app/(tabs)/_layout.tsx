@@ -1,5 +1,5 @@
 import { Redirect, Tabs } from 'expo-router';
-import { Text } from 'react-native';
+import { Platform, Text } from 'react-native';
 import { LogoMarca } from '@/components/LogoMarca';
 import { useAuth } from '@/context/AuthContext';
 import { useTheme } from '@/context/ThemeContext';
@@ -8,6 +8,13 @@ import { useAbrirTelaPelaNotificacao, useLembretesAutomaticos } from '@/hooks/us
 /** Só existe com usuário logado: mantém os lembretes sincronizados e abre telas ao tocar nas notificações. */
 function ServicosEmSegundoPlano() {
   useLembretesAutomaticos();
+  if (Platform.OS === 'web') {
+    return null;
+  }
+  return <OuvinteDeNotificacao />;
+}
+
+function OuvinteDeNotificacao() {
   useAbrirTelaPelaNotificacao();
   return null;
 }

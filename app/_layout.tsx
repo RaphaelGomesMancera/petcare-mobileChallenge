@@ -1,6 +1,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Slot } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
+import { Platform, View } from 'react-native';
 import { AuthProvider } from '@/context/AuthContext';
 import { ThemeProvider } from '@/context/ThemeContext';
 
@@ -19,7 +20,15 @@ export default function RootLayout() {
       <ThemeProvider>
         <AuthProvider>
           <StatusBar style="light" />
-          <Slot />
+          {Platform.OS === 'web' ? (
+            <View style={{ flex: 1, backgroundColor: '#d7e6e2', alignItems: 'center' }}>
+              <View style={{ width: '100%', maxWidth: 430, flex: 1, backgroundColor: '#eef6f4' }}>
+                <Slot />
+              </View>
+            </View>
+          ) : (
+            <Slot />
+          )}
         </AuthProvider>
       </ThemeProvider>
     </QueryClientProvider>
