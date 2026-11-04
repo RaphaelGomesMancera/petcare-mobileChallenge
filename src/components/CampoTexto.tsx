@@ -18,7 +18,7 @@ const makeStyles = (colors: Palette) =>
       backgroundColor: colors.card,
       borderWidth: 1,
       borderColor: colors.borda,
-      borderRadius: 10,
+      borderRadius: 14,
       padding: 14,
       marginBottom: 12,
     },

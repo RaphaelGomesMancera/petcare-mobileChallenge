@@ -6,8 +6,11 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "userInterfaceStyle": "automatic",
+    "icon": "./assets/logo.png",
     "splash": {
-      "backgroundColor": "#1a5fb4"
+      "image": "./assets/logo.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#eef6f4"
     },
     "ios": {
       "supportsTablet": true,
@@ -22,7 +25,7 @@
       [
         "expo-notifications",
         {
-          "color": "#1a5fb4"
+          "color": "#0b5cad"
         }
       ]
     ]

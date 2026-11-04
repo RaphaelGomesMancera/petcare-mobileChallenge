@@ -23,6 +23,13 @@ export function Cartao({ titulo, children }: CartaoProps) {
 
 const makeStyles = (colors: Palette) =>
   StyleSheet.create({
-    cartao: { backgroundColor: colors.card, borderRadius: 12, padding: 16, marginBottom: 16 },
+    cartao: {
+      backgroundColor: colors.card,
+      borderRadius: 18,
+      padding: 16,
+      marginBottom: 16,
+      borderWidth: 1,
+      borderColor: colors.borda,
+    },
     titulo: { fontSize: 16, fontWeight: 'bold', color: colors.azul, marginBottom: 10 },
   });

@@ -38,7 +38,7 @@ export function Botao({ titulo, onPress, variante = 'primario', carregando = fal
 
 const makeStyles = (colors: Palette) =>
   StyleSheet.create({
-    base: { borderRadius: 10, padding: 14, alignItems: 'center' },
+    base: { borderRadius: 999, padding: 14, alignItems: 'center' },
     primario: { backgroundColor: colors.verde },
     secundario: { backgroundColor: 'transparent', borderWidth: 1, borderColor: colors.azul },
     perigo: { backgroundColor: colors.erro },

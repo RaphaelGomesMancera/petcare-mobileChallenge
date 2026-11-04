@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { KeyboardAvoidingView, Platform, StyleSheet, Text } from 'react-native';
+import { Image, KeyboardAvoidingView, Platform, StyleSheet, Text } from 'react-native';
 import { Link, router } from 'expo-router';
 import { Botao } from '@/components/Botao';
 import { CampoTexto } from '@/components/CampoTexto';
@@ -39,6 +39,7 @@ export default function CadastroScreen() {
 
   return (
     <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <Image source={require('../../assets/logo.png')} style={styles.logo} />
       <Text style={styles.titulo}>Criar conta de tutor</Text>
 
       <TextoErro mensagem={erro} />
@@ -70,6 +71,7 @@ export default function CadastroScreen() {
 const makeStyles = (colors: Palette) =>
   StyleSheet.create({
     container: { flex: 1, justifyContent: 'center', padding: 24, backgroundColor: colors.fundo },
-    titulo: { fontSize: 22, fontWeight: 'bold', color: colors.azul, textAlign: 'center', marginBottom: 24 },
+    logo: { width: 84, height: 84, borderRadius: 22, alignSelf: 'center', marginBottom: 12 },
+    titulo: { fontSize: 22, fontWeight: '800', color: colors.azul, textAlign: 'center', marginBottom: 24 },
     link: { textAlign: 'center', marginTop: 20, color: colors.azul },
   });

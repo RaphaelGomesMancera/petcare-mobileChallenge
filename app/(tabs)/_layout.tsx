@@ -1,5 +1,6 @@
 import { Redirect, Tabs } from 'expo-router';
 import { Text } from 'react-native';
+import { LogoMarca } from '@/components/LogoMarca';
 import { useAuth } from '@/context/AuthContext';
 import { useTheme } from '@/context/ThemeContext';
 import { useAbrirTelaPelaNotificacao, useLembretesAutomaticos } from '@/hooks/useLembretes';
@@ -30,6 +31,7 @@ export default function TabsLayout() {
           tabBarStyle: { backgroundColor: colors.card, borderTopColor: colors.borda },
           headerStyle: { backgroundColor: colors.header },
           headerTintColor: colors.onPrimary,
+          headerTitle: () => <LogoMarca />,
         }}
         sceneContainerStyle={{ backgroundColor: colors.fundo }}
       >
