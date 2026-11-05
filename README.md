@@ -5,7 +5,7 @@ a clínica conduz a agenda. Consome a API Java do projeto ([petcare-api](https:/
 
 > **App publicado (APK/link):** https://expo.dev/artifacts/eas/PsSY0L0M2iDZf5GvVpnA0Z2GOQ2og5jXiWARsI_vLgI.apk
 > **API em produção:** https://petcare-api-aod8.onrender.com
-> **Vídeo de demonstração:** `<COLE_AQUI_O_LINK_DO_VÍDEO>`
+> **Vídeo de demonstração:** https://youtu.be/d-sfwy6yKCw
 
 ## 👥 Integrantes
 
